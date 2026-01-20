@@ -1,0 +1,26 @@
+.console {
+  background: #111;
+  color: #fff;
+  padding: 10px;
+  height: 100%;
+  overflow: auto;
+}
+
+.log {
+  color: #7fff00;
+}
+
+.error {
+  color: #ff4d4f;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  height: 100vh;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+}

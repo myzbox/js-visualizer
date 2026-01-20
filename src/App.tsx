@@ -1,35 +1,33 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import CodeEditor from "../editor/CodeEditor";
+import ConsolePanel, { ConsoleMessage } from "../console/ConsolePanel";
+import { validateJS } from "../engine/jsValidator";
+import { executeCode } from "../engine/executor";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [code, setCode] = useState(`console.log("Hello JS Visualizer");`);
+  const [logs, setLogs] = useState<ConsoleMessage[]>([]);
+
+  const run = () => {
+    setLogs([]);
+    const error = validateJS(code);
+    if (error) {
+      setLogs([{ type: "error", message: error }]);
+      return;
+    }
+
+    executeCode(code, (log) =>
+      setLogs((prev) => [...prev, log])
+    );
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="layout">
+      <div className="editor">
+        <button onClick={run}>▶ Run</button>
+        <CodeEditor code={code} onChange={setCode} />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+      <ConsolePanel logs={logs} />
+    </div>
+  );
 }
-
-export default App
