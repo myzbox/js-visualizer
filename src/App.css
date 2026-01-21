@@ -141,11 +141,11 @@
 
 .visualizer-section {
   grid-area: visualizer;
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  overflow-y: auto;
+  gap: 16px;
+  overflow-y: hidden;
   background: var(--bg-main);
 }
 
@@ -159,11 +159,44 @@
 }
 
 .console-section .console {
-  padding-left: 20px;
-  padding-top: 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+}
+
+.console-msg {
+  display: flex;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.console-msg.log {
+  color: var(--text-primary);
+}
+
+.console-msg.error {
+  color: var(--accent-error);
+}
+
+.msg-icon {
+  color: var(--accent-primary);
+  opacity: 0.7;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.msg-text {
+  flex: 1;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .panel-header {

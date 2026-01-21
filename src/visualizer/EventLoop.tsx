@@ -32,11 +32,11 @@ export function MacrotaskQueue({ items }: { items: string[] }) {
   );
 }
 
-export function EventLoopSpinner() {
+export function EventLoopSpinner({ isActive = true }: { isActive?: boolean }) {
   return (
     <div className="event-loop-visual">
        <div className="event-loop-spinner">
-          <div className="spinner-inner"></div>
+          <div className={`spinner-inner ${isActive ? 'spinning' : 'stopped'}`}></div>
           <div className="spinner-center">↺</div>
        </div>
        <div className="spinner-label">Event Loop</div>

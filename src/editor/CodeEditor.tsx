@@ -17,6 +17,12 @@ export default function CodeEditor({
       options={{
         fontSize: 14,
         minimap: { enabled: false },
+        scrollbar: {
+          vertical: 'auto',
+          horizontal: 'auto',
+        },
+        overviewRulerLanes: 0,
+        scrollBeyondLastLine: false,
       }}
     />
   );

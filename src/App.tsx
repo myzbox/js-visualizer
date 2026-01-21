@@ -3,7 +3,6 @@ import "./App.css";
 import CodeEditor from "./editor/CodeEditor";
 import ConsolePanel from "./console/ConsolePanel";
 import CallStack from "./visualizer/CallStack";
-import EventLoopView from "./visualizer/EventLoop";
 import WebAPIs from "./visualizer/WebAPIs";
 import { VisualizerEngine } from "./engine/visualizerEngine";
 import type { VisualizerStep } from "./engine/visualizerEngine";
@@ -145,19 +144,18 @@ export default function App() {
       </section>
 
       <section className="visualizer-section">
-        <div className="visualizer-layout">
-          <div className="left-panel">
+        <div className="visualizer-main-grid">
+          <div className="visualizer-column left">
             <CallStack stack={currentStep?.callStack || []} />
+            <EventLoopSpinner isActive={engine ? !engine.isAtEnd() : false} />
           </div>
-          <div className="right-panel">
-            <div className="api-section">
-              <WebAPIs tasks={currentStep?.webAPIs || []} />
-            </div>
-            <div className="queue-section">
-              <EventLoopView 
-                micro={currentStep?.microtasks || []} 
-                macro={currentStep?.macrotasks || []} 
-              />
+
+          {/* Right Column: Web API + Queues */}
+          <div className="visualizer-column right">
+            <WebAPIs tasks={currentStep?.webAPIs || []} />
+            <div className="queues-v-stack">
+              <MicrotaskQueue items={currentStep?.microtasks || []} />
+              <MacrotaskQueue items={currentStep?.macrotasks || []} />
             </div>
           </div>
         </div>
@@ -173,125 +171,6 @@ export default function App() {
         <div className="panel-header">Output</div>
         <ConsolePanel logs={currentStep?.console || []} />
       </section>
-
-      <style>{`
-        .sample-selector {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          margin: 0 20px;
-          padding: 4px 12px;
-          background: rgba(255, 255, 255, 0.03);
-          border-radius: 20px;
-          border: 1px solid var(--border-subtle);
-        }
-        .sample-selector .label {
-          font-size: 0.75rem;
-          color: var(--text-secondary);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-        .btn-sample {
-          background: transparent;
-          border: none;
-          color: var(--text-secondary);
-          font-size: 0.75rem;
-          padding: 4px 8px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .btn-sample:hover {
-          background: rgba(255, 255, 255, 0.05);
-          color: var(--accent-primary);
-        }
-        .visualizer-layout {
-          display: grid;
-          grid-template-columns: 200px 1fr;
-          gap: 20px;
-          flex: 1;
-          min-height: 0;
-        }
-        .left-panel {
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-        }
-        .right-panel {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-          min-height: 0;
-        }
-        .api-section {
-          flex: 0 0 auto;
-        }
-        .queue-section {
-          flex: 1;
-          min-height: 0;
-          overflow-y: auto;
-        }
-        .console-section .console {
-          padding-left: 20px;
-          padding-top: 10px;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .description-panel {
-          margin-top: auto;
-          padding-bottom: 12px;
-        }
-        .description-text {
-          padding: 16px;
-          color: var(--accent-info);
-          font-style: italic;
-        }
-        .btn-run {
-          background: var(--accent-primary);
-          border: none;
-        }
-        .btn-run:hover {
-          background: rgba(99, 102, 241, 0.9);
-        }
-        .btn-reset {
-          color: var(--text-secondary);
-        }
-        .step-controls {
-          display: flex;
-          background: var(--bg-elevated);
-          border-radius: 8px;
-          border: 1px solid var(--border-subtle);
-        }
-        .step-controls button {
-          border: none;
-          background: transparent;
-        }
-        .step-controls button:not(:last-child) {
-          border-right: 1px solid var(--border-subtle);
-        }
-        .btn-active {
-          color: var(--accent-primary);
-          background: rgba(99, 102, 241, 0.1) !important;
-        }
-        .editor-wrapper {
-          flex: 1;
-          position: relative;
-        }
-        .error-badge {
-          color: var(--accent-error);
-          font-size: 0.7rem;
-          margin-left: 8px;
-        }
-        .error-banner {
-          padding: 12px;
-          background: rgba(239, 68, 68, 0.1);
-          color: var(--accent-error);
-          font-family: var(--font-mono);
-          font-size: 0.8rem;
-          border-top: 1px solid var(--border-strong);
-        }
-      `}</style>
     </div>
   );
 }
