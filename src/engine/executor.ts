@@ -1,4 +1,4 @@
-import { ConsoleMessage } from "../console/ConsolePanel";
+import type { ConsoleMessage } from "../console/ConsolePanel";
 
 export function executeCode(
   code: string,
