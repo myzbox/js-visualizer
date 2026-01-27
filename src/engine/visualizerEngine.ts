@@ -4,9 +4,10 @@ export interface VisualizerStep {
   callStack: string[];
   microtasks: string[];
   macrotasks: string[];
-  webAPIs: { id: string; label: string; type: TaskType }[];
+  webAPIs: { id: string; label: string; type: TaskType; delay?: number; remaining?: number; isLoading?: boolean; completionLabel?: string }[];
   console: { type: 'log' | 'error'; message: string }[];
   description: string;
+  autoAdvanceDelay?: number;
 }
 
 export class VisualizerEngine {
@@ -48,10 +49,14 @@ export class VisualizerEngine {
 
     const lines = this.codeContent.split('\n');
     const findLogInCallback = (startIndex: number) => {
-      for (let i = startIndex; i < Math.min(startIndex + 10, lines.length); i++) {
+      // Scan up to 20 lines to find the relevant console.log
+      // We don't stop at '}' immediately because chained promises (.then) might follow.
+      for (let i = startIndex; i < Math.min(startIndex + 20, lines.length); i++) {
         const m = lines[i].match(/console\.log\((.*)\)/);
         if (m) return resolveLogValue(m[1]);
-        if (lines[i].includes('}')) break;
+        // Only break if we see a '}' at the start of a line that likely closes the whole block,
+        // but even that is risky with chaining. Ideally we scan enough lines.
+        // For this simple visualizer, just scanning 20 lines is safer than breaking early.
       }
       return null;
     };
@@ -68,16 +73,79 @@ export class VisualizerEngine {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('//')) return;
 
+      // Detect Chained Methods (e.g. .then, .catch)
+      // These should not be executed synchronously if they contain blocks.
+      if (trimmed.startsWith('.') && (trimmed.includes('then') || trimmed.includes('catch'))) {
+         if (trimmed.includes('{') && !trimmed.includes('}')) {
+             // If we are not already skipping, start skipping this block
+             if (skipUntilLevel === -1) {
+                 skipUntilLevel = braceLevel;
+             }
+             braceLevel++;
+         }
+         return; // Skip execution of the line itself
+      }
+
       // Detect Async Registrations
-      if (trimmed.includes('setTimeout') || (trimmed.includes('Promise.resolve') && trimmed.includes('.then'))) {
+      if (trimmed.includes('setTimeout') || (trimmed.includes('Promise.resolve') && trimmed.includes('.then')) || trimmed.includes('fetch(')) {
         const isTimeout = trimmed.includes('setTimeout');
-        state.callStack.push(isTimeout ? 'setTimeout(...)' : 'Promise.resolve().then(...)');
-        pushStep(isTimeout ? 'Registering timer' : 'Scheduling microtask');
-        
-        const msg = findLogInCallback(index) || (isTimeout ? 'Timeout callback' : 'Promise callback');
+        const isFetch = trimmed.includes('fetch(');
         
         if (isTimeout) {
-          state.webAPIs.push({ id: `t${Math.random()}`, label: msg, type: 'timeout' });
+            state.callStack.push('setTimeout(...)');
+            pushStep('Registering timer');
+        } else if (isFetch) {
+            state.callStack.push('fetch(...)');
+            pushStep('Initiating network request');
+        } else {
+            state.callStack.push('Promise.resolve().then(...)');
+            pushStep('Scheduling microtask');
+        }
+        
+        const msg = findLogInCallback(index) || (isTimeout ? 'Timeout callback' : isFetch ? 'Fetch callback' : 'Promise callback');
+        
+        if (isTimeout) {
+          // Extract delay from setTimeout(callback, delay)
+          // tailored for multi-line support
+          let delay = 0;
+          const currentLineMatch = trimmed.match(/setTimeout\s*\([^,]+,\s*(\d+)\s*\)/);
+          
+          if (currentLineMatch) {
+             delay = parseInt(currentLineMatch[1]);
+          } else {
+             // Look ahead for the closing brace and delay
+             for (let i = index; i < Math.min(index + 20, lines.length); i++) {
+                const nextLine = lines[i].trim();
+                const endMatch = nextLine.match(/\},\s*(\d+)\s*\);?/);
+                if (endMatch) {
+                   delay = parseInt(endMatch[1]);
+                   break;
+                }
+             }
+          }
+          
+          state.webAPIs.push({ 
+            id: `t${Math.random()}`, 
+            label: msg, 
+            type: 'timeout',
+            delay: delay,
+            remaining: delay
+          });
+        } else if (isFetch) {
+           // Parse URL for label
+           const urlMatch = trimmed.match(/fetch\(['"`](.*)['"`]\)/);
+           const url = urlMatch ? urlMatch[1] : 'Network Request';
+           // Simulate 1.5s network delay
+           const networkDelay = 1500;
+           
+           state.webAPIs.push({
+             id: `f${Math.random()}`,
+             label: `fetch(${url})`,
+             type: 'fetch',
+             delay: networkDelay,
+             remaining: networkDelay,
+             completionLabel: msg // Store the callback/log message for later execution
+           });
         } else {
           state.microtasks.push(msg);
         }
@@ -86,6 +154,7 @@ export class VisualizerEngine {
         pushStep('Registration complete');
 
         if (trimmed.includes('{') && !trimmed.includes('}')) {
+          // If the async call opens a block (e.g. setTimeout(() => {), skip it
           skipUntilLevel = braceLevel;
           braceLevel++;
         }
@@ -132,14 +201,47 @@ export class VisualizerEngine {
     });
 
     state.callStack.pop();
-    pushStep('main() execution complete. Stack Empty.');
+    // Only push independent "Stack Empty" step if NO WebAPIs are waiting.
+    // If WebAPIs exist, the "Waiting" step will serve as the "Stack Empty" state, saving a click.
+    if (state.webAPIs.length === 0) {
+      pushStep('main() execution complete. Stack Empty.');
+    }
 
-    // 2. Web API -> Task Queue phase
+    // 2. Web API -> Task Queue phase (with timer countdown)
     while (state.webAPIs.length > 0) {
-      const api = state.webAPIs.shift();
-      if (api) {
-        state.macrotasks.push(api.label);
-        pushStep(`Timer expired: handler moved to Macrotask Queue`);
+      const api = state.webAPIs[0];
+      
+      // Handle delays for both timeout and fetch
+      if (api && (api.type === 'timeout' || api.type === 'fetch') && api.delay && api.delay > 0) {
+        // Create a SINGLE waiting step that auto-advances
+        state.webAPIs[0] = {
+           ...state.webAPIs[0],
+           isLoading: true
+        };
+        
+        const desc = api.type === 'fetch' ? `Network request in progress (${api.delay}ms)...` : `Timer waiting (${api.delay}ms)...`;
+        
+        this.steps.push({ 
+            ...JSON.parse(JSON.stringify(state)), 
+            description: desc,
+            autoAdvanceDelay: api.delay 
+        });
+        
+        // Remove loading state for the next step (where it moves to queue)
+        state.webAPIs[0] = { ...state.webAPIs[0], isLoading: false };
+      }
+      
+      const completedApi = state.webAPIs.shift();
+      if (completedApi) {
+        if (completedApi.type === 'timeout') {
+            state.macrotasks.push(completedApi.label);
+            pushStep(`Timer expired: handler moved to Macrotask Queue`);
+        } else if (completedApi.type === 'fetch') {
+            // Fetch callbacks (Promises) go to Microtask Queue
+            // Use completionLabel if available (the log message), otherwise fallback to label
+            state.microtasks.push(completedApi.completionLabel || completedApi.label);
+            pushStep(`Network request complete: Promise resolved to Microtask Queue`);
+        }
       }
     }
 

@@ -2,6 +2,10 @@ interface WebAPITask {
   id: string;
   label: string;
   type: "timeout" | "fetch" | "promise" | "event";
+  delay?: number;
+  remaining?: number;
+  isLoading?: boolean;
+  completionLabel?: string;
 }
 
 export default function WebAPIs({ tasks }: { tasks: WebAPITask[] }) {
@@ -15,7 +19,20 @@ export default function WebAPIs({ tasks }: { tasks: WebAPITask[] }) {
         {tasks.map((task) => (
           <div key={task.id} className={`api-item ${task.type}`}>
             <span className="api-icon">{getIcon(task.type)}</span>
-            <span className="api-label">{task.label}</span>
+            <div className="api-content">
+              <div className="api-header-row">
+                <span className="api-label">{task.label}</span>
+                {(task.type === 'timeout' || task.type === 'fetch') && task.delay !== undefined && (
+                  <span className="delay-badge">{task.delay}ms</span>
+                )}
+              </div>
+              {task.isLoading && (
+                <div className="waiting-indicator">
+                  <div className="mini-spinner"></div>
+                  <span className="waiting-text">Waiting {task.delay}ms...</span>
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>

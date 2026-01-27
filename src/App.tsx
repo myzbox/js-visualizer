@@ -89,6 +89,16 @@ export default function App() {
     };
   }, [isPlaying, engine]);
 
+  // Handle auto-advancing steps (for wait times)
+  useEffect(() => {
+    if (currentStep?.autoAdvanceDelay && engine && !engine.isAtEnd()) {
+      const timer = setTimeout(() => {
+        nextStep();
+      }, currentStep.autoAdvanceDelay);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, engine]);
+
   return (
     <div className="app-container">
       <header className="header">

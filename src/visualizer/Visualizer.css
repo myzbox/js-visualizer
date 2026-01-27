@@ -64,6 +64,84 @@
 .api-item.fetch { border-left: 3px solid var(--accent-info); }
 .api-item.promise { border-left: 3px solid var(--accent-secondary); }
 
+.api-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.timer-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border-subtle);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-warning), var(--accent-primary));
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
+}
+
+.timer-text {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--accent-warning);
+  font-weight: 600;
+  min-width: 40px;
+  text-align: right;
+}
+
+.api-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.delay-badge {
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.waiting-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.waiting-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.mini-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-left-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
 /* Event Loop Spinner Styles */
 .event-loop-visual {
    display: flex;
